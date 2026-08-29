@@ -1,0 +1,1329 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2870
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+{\info
+{\title Athletics Volunteer Hours}
+{\author Kristina Pyle}
+{\*\company Forest Hill CHS Athletics}
+{\*\copyright 2026}}\margl1440\margr1440\vieww34000\viewh18800\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 import React, \{ useState, useEffect \} from 'react';\
+import \{ \
+  Users, \
+  Calendar, \
+  Clock, \
+  CheckCircle2, \
+  LogOut, \
+  LogIn, \
+  Plus, \
+  Search, \
+  Award, \
+  FileText, \
+  UserPlus, \
+  Trophy, \
+  ChevronRight, \
+  Camera, \
+  Filter,\
+  Download,\
+  AlertCircle,\
+  ShieldCheck,\
+  Building,\
+  Gift,\
+  CalendarPlus,\
+  Check,\
+  Trash2,\
+  Edit3,\
+  UserCheck\
+\} from 'lucide-react';\
+\
+// Pre-populated Sample Data\
+const INITIAL_STUDENTS = [\
+  \{ id: '1001', name: 'Alex Johnson', grade: '11', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250', totalHours: 14.5 \},\
+  \{ id: '1002', name: 'Marcus Chen', grade: '12', photo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=250', totalHours: 22.0 \},\
+  \{ id: '1003', name: 'Sarah Williams', grade: '10', photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=250', totalHours: 8.5 \},\
+  \{ id: '1004', name: 'Jordan Taylor', grade: '11', photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=250', totalHours: 19.0 \},\
+  \{ id: '1005', name: 'Emily Rodriguez', grade: '09', photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=250', totalHours: 5.0 \},\
+  \{ id: '1006', name: 'David Kim', grade: '12', photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=250', totalHours: 12.0 \},\
+];\
+\
+const TODAY_STR = new Date().toISOString().split('T')[0];\
+\
+const INITIAL_EVENTS = [\
+  \{ \
+    id: 'e1', \
+    sport: 'Varsity Football', \
+    date: TODAY_STR, \
+    time: '18:00',\
+    location: 'Main Field Stadium',\
+    duties: ['Concessions Stand', 'Ticket Gate', 'Scoreboard Operator', 'Parking Attendant']\
+  \},\
+  \{ \
+    id: 'e2', \
+    sport: 'Girls Basketball', \
+    date: TODAY_STR, \
+    time: '16:30',\
+    location: 'Gymnasium A',\
+    duties: ['Concessions Stand', 'Stat Keeper', 'Team Water Duty']\
+  \},\
+  \{ \
+    id: 'e3', \
+    sport: 'Varsity Football', \
+    date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0], \
+    time: '18:00',\
+    location: 'Main Field Stadium',\
+    duties: ['Concessions Stand', 'Ticket Gate', 'Scoreboard Operator', 'Parking Attendant']\
+  \}\
+];\
+\
+// Pre-assignments (Duty assignments ahead of game day)\
+const INITIAL_PREASSIGNMENTS = [\
+  \{ id: 'pa1', eventId: 'e1', studentId: '1001', duty: 'Ticket Gate' \},\
+  \{ id: 'pa2', eventId: 'e1', studentId: '1003', duty: 'Concessions Stand' \},\
+  \{ id: 'pa3', eventId: 'e1', studentId: '1004', duty: 'Scoreboard Operator' \},\
+];\
+\
+const INITIAL_LOGS = [\
+  \{\
+    id: 'l1',\
+    studentId: '1002',\
+    eventId: 'e1',\
+    duty: 'Concessions Stand',\
+    checkInTime: new Date(Date.now() - 7200000).toISOString(),\
+    checkOutTime: null,\
+    hoursEarned: 0,\
+    bonusHours: 0,\
+    bonusReason: '',\
+    status: 'ACTIVE'\
+  \}\
+];\
+\
+export default function App() \{\
+  const [activeTab, setActiveTab] = useState('checkin'); // checkin, students, events, reports\
+  const [students, setStudents] = useState(INITIAL_STUDENTS);\
+  const [events, setEvents] = useState(INITIAL_EVENTS);\
+  const [preassignments, setPreassignments] = useState(INITIAL_PREASSIGNMENTS);\
+  const [logs, setLogs] = useState(INITIAL_LOGS);\
+\
+  // Selected filters\
+  const [selectedEventId, setSelectedEventId] = useState('e1');\
+  const [searchQuery, setSearchQuery] = useState('');\
+\
+  // Modals state\
+  const [showAddStudent, setShowAddStudent] = useState(false);\
+  const [showAddEvent, setShowAddEvent] = useState(false);\
+  const [showBulkUpload, setShowBulkUpload] = useState(false);\
+  const [showAssignDutyModal, setShowAssignDutyModal] = useState(false);\
+  const [showCheckOutModal, setShowCheckOutModal] = useState(false);\
+\
+  // Selection targets\
+  const [selectedStudentForDuty, setSelectedStudentForDuty] = useState(null);\
+  const [selectedLogForCheckOut, setSelectedLogForCheckOut] = useState(null);\
+\
+  // Forms state\
+  const [newStudent, setNewStudent] = useState(\{ name: '', id: '', grade: '09', photo: '' \});\
+  const [newEvent, setNewEvent] = useState(\{ sport: 'Varsity Football', date: TODAY_STR, time: '18:00', location: 'Main Stadium', duties: 'Concessions, Ticket Gate, Scoreboard' \});\
+  const [selectedDuty, setSelectedDuty] = useState('');\
+\
+  // Bulk Upload Form State\
+  const [bulkSport, setBulkSport] = useState('Varsity Football');\
+  const [bulkGameCount, setBulkGameCount] = useState(5);\
+  const [bulkStartDate, setBulkStartDate] = useState(TODAY_STR);\
+  const [bulkDayOfWeek, setBulkDayOfWeek] = useState('5'); // 5 = Friday\
+  const [bulkTime, setBulkTime] = useState('19:00');\
+  const [bulkLocation, setBulkLocation] = useState('Home Stadium');\
+  const [bulkDuties, setBulkDuties] = useState('Concessions, Ticket Gate, Field Setup, Announcer Assistant');\
+\
+  // Check out with bonus state\
+  const [checkoutBonusHours, setCheckoutBonusHours] = useState('0');\
+  const [checkoutBonusReason, setCheckoutBonusReason] = useState('');\
+\
+  // Active event object\
+  const activeEvent = events.find(e => e.id === selectedEventId) || events[0] || \{\};\
+\
+  // Current logs for active event\
+  const currentEventLogs = logs.filter(l => l.eventId === selectedEventId);\
+  const currentPreassignments = preassignments.filter(p => p.eventId === selectedEventId);\
+\
+  // Check In Function\
+  const handleCheckIn = (studentId, dutyName) => \{\
+    // Check if student is already active\
+    const activeLog = logs.find(l => l.studentId === studentId && l.status === 'ACTIVE');\
+    if (activeLog) \{\
+      alert('This student is already checked in to an active duty!');\
+      return;\
+    \}\
+\
+    const newLog = \{\
+      id: 'l_' + Date.now(),\
+      studentId,\
+      eventId: selectedEventId,\
+      duty: dutyName,\
+      checkInTime: new Date().toISOString(),\
+      checkOutTime: null,\
+      hoursEarned: 0,\
+      bonusHours: 0,\
+      bonusReason: '',\
+      status: 'ACTIVE'\
+    \};\
+\
+    setLogs([newLog, ...logs]);\
+    setShowAssignDutyModal(false);\
+    setSelectedStudentForDuty(null);\
+  \};\
+\
+  // Pre-Assign Function (Assign ahead of game day)\
+  const handlePreAssignStudent = (studentId, dutyName) => \{\
+    // Check if already preassigned\
+    const exists = preassignments.some(p => p.eventId === selectedEventId && p.studentId === studentId);\
+    if (exists) \{\
+      alert('Student is already pre-assigned to a duty for this event.');\
+      return;\
+    \}\
+\
+    const newAssignment = \{\
+      id: 'pa_' + Date.now(),\
+      eventId: selectedEventId,\
+      studentId,\
+      duty: dutyName\
+    \};\
+\
+    setPreassignments([...preassignments, newAssignment]);\
+    setShowAssignDutyModal(false);\
+    setSelectedStudentForDuty(null);\
+  \};\
+\
+  // Remove Pre-Assignment\
+  const handleRemovePreassignment = (id) => \{\
+    setPreassignments(preassignments.filter(p => p.id !== id));\
+  \};\
+\
+  // Open Check Out Modal with Bonus options\
+  const openCheckOutModal = (log) => \{\
+    setSelectedLogForCheckOut(log);\
+    setCheckoutBonusHours('0');\
+    setCheckoutBonusReason('');\
+    setShowCheckOutModal(true);\
+  \};\
+\
+  // Confirm Check Out\
+  const confirmCheckOut = () => \{\
+    if (!selectedLogForCheckOut) return;\
+\
+    const checkOutDate = new Date();\
+    const checkInDate = new Date(selectedLogForCheckOut.checkInTime);\
+    const calculatedHours = Math.max(0.1, parseFloat(((checkOutDate - checkInDate) / (1000 * 60 * 60)).toFixed(2)));\
+    const bonus = parseFloat(checkoutBonusHours) || 0;\
+    const finalTotalForSession = parseFloat((calculatedHours + bonus).toFixed(2));\
+\
+    // Update Logs\
+    setLogs(logs.map(log => \{\
+      if (log.id === selectedLogForCheckOut.id) \{\
+        return \{\
+          ...log,\
+          checkOutTime: checkOutDate.toISOString(),\
+          hoursEarned: calculatedHours,\
+          bonusHours: bonus,\
+          bonusReason: checkoutBonusReason,\
+          status: 'COMPLETED'\
+        \};\
+      \}\
+      return log;\
+    \}));\
+\
+    // Update Student overall hours balance\
+    setStudents(prev => prev.map(st => \{\
+      if (st.id === selectedLogForCheckOut.studentId) \{\
+        return \{ ...st, totalHours: parseFloat((st.totalHours + finalTotalForSession).toFixed(2)) \};\
+      \}\
+      return st;\
+    \}));\
+\
+    setShowCheckOutModal(false);\
+    setSelectedLogForCheckOut(null);\
+  \};\
+\
+  // Bulk Upload Generator\
+  const handleGenerateBulkSchedule = (e) => \{\
+    e.preventDefault();\
+    const dutyList = bulkDuties.split(',').map(d => d.trim()).filter(Boolean);\
+    const createdEvents = [];\
+\
+    let currentDate = new Date(bulkStartDate);\
+    const targetDay = parseInt(bulkDayOfWeek);\
+\
+    for (let i = 0; i < bulkGameCount; i++) \{\
+      // Find next matching day of week if not first iteration\
+      if (i > 0) \{\
+        currentDate.setDate(currentDate.getDate() + 7);\
+      \} else \{\
+        // Adjust initial date to next matching day if needed\
+        while (currentDate.getDay() !== targetDay) \{\
+          currentDate.setDate(currentDate.getDate() + 1);\
+        \}\
+      \}\
+\
+      const dateStr = currentDate.toISOString().split('T')[0];\
+      createdEvents.push(\{\
+        id: 'bulk_' + Date.now() + '_' + i,\
+        sport: bulkSport,\
+        date: dateStr,\
+        time: bulkTime,\
+        location: bulkLocation,\
+        duties: dutyList.length ? dutyList : ['Concessions', 'Ticket Gate', 'Scorekeeper']\
+      \});\
+    \}\
+\
+    setEvents([...createdEvents, ...events]);\
+    if (createdEvents.length > 0) \{\
+      setSelectedEventId(createdEvents[0].id);\
+    \}\
+    setShowBulkUpload(false);\
+  \};\
+\
+  // Add Single Student\
+  const handleAddStudentSubmit = (e) => \{\
+    e.preventDefault();\
+    if (!newStudent.name || !newStudent.id) return;\
+\
+    const photoUrl = newStudent.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=$\{newStudent.id\}`;\
+    const studentObj = \{\
+      id: newStudent.id,\
+      name: newStudent.name,\
+      grade: newStudent.grade,\
+      photo: photoUrl,\
+      totalHours: 0\
+    \};\
+\
+    setStudents([...students, studentObj]);\
+    setNewStudent(\{ name: '', id: '', grade: '09', photo: '' \});\
+    setShowAddStudent(false);\
+  \};\
+\
+  // Add Single Event\
+  const handleAddEventSubmit = (e) => \{\
+    e.preventDefault();\
+    if (!newEvent.date || !newEvent.time) return;\
+\
+    const dutyList = newEvent.duties.split(',').map(d => d.trim()).filter(Boolean);\
+    const eventObj = \{\
+      id: 'e_' + Date.now(),\
+      sport: newEvent.sport,\
+      date: newEvent.date,\
+      time: newEvent.time,\
+      location: newEvent.location || 'Home Stadium',\
+      duties: dutyList.length ? dutyList : ['General Volunteer', 'Concessions', 'Gate']\
+    \};\
+\
+    setEvents([eventObj, ...events]);\
+    setSelectedEventId(eventObj.id);\
+    setNewEvent(\{ sport: 'Varsity Football', date: TODAY_STR, time: '18:00', location: 'Home Stadium', duties: '' \});\
+    setShowAddEvent(false);\
+  \};\
+\
+  // Stats calculation\
+  const activeCount = logs.filter(l => l.status === 'ACTIVE').length;\
+  const totalHoursToday = logs\
+    .filter(l => l.status === 'COMPLETED' && l.checkInTime.startsWith(TODAY_STR))\
+    .reduce((sum, l) => sum + (l.hoursEarned || 0) + (l.bonusHours || 0), 0);\
+\
+  // CSV Export\
+  const exportToCSV = () => \{\
+    let csvContent = "data:text/csv;charset=utf-8,Student Name,Student ID,Sport Event,Duty,Check In,Check Out,Base Hours,Bonus Hours,Bonus Reason,Total Hours\\n";\
+    \
+    logs.forEach(log => \{\
+      const student = students.find(s => s.id === log.studentId);\
+      const event = events.find(e => e.id === log.eventId);\
+      const inTime = log.checkInTime ? new Date(log.checkInTime).toLocaleString() : '';\
+      const outTime = log.checkOutTime ? new Date(log.checkOutTime).toLocaleString() : 'N/A';\
+      const base = log.hoursEarned || 0;\
+      const bonus = log.bonusHours || 0;\
+      \
+      csvContent += `"$\{student?.name || 'Unknown'\}","$\{log.studentId\}","$\{event?.sport || 'Event'\}","$\{log.duty\}","$\{inTime\}","$\{outTime\}","$\{base\}","$\{bonus\}","$\{log.bonusReason || ''\}","$\{(base + bonus).toFixed(2)\}"\\n`;\
+    \});\
+\
+    const encodedUri = encodeURI(csvContent);\
+    const link = document.createElement("a");\
+    link.setAttribute("href", encodedUri);\
+    link.setAttribute("download", `volunteer_hours_$\{TODAY_STR\}.csv`);\
+    document.body.appendChild(link);\
+    link.click();\
+    document.body.removeChild(link);\
+  \};\
+\
+  return (\
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-12">\
+      \{/* Header Bar */\}\
+      <header className="bg-indigo-900 text-white sticky top-0 z-30 shadow-md">\
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex items-center justify-between">\
+          <div className="flex items-center space-x-3">\
+            <div className="bg-indigo-700 p-2 rounded-lg">\
+              <Trophy className="h-6 w-6 text-amber-400" />\
+            </div>\
+            <div>\
+              <h1 className="text-xl font-bold leading-tight">High School Athletics</h1>\
+              <p className="text-xs text-indigo-200">Admin Volunteer Manager</p>\
+            </div>\
+          </div>\
+          <div className="flex items-center space-x-3 text-xs sm:text-sm">\
+            <div className="bg-indigo-800/80 px-3 py-1.5 rounded-full border border-indigo-700 flex items-center space-x-2">\
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>\
+              <span><strong>\{activeCount\}</strong> On-Duty Now</span>\
+            </div>\
+          </div>\
+        </div>\
+\
+        \{/* Tab Navigation */\}\
+        <div className="bg-indigo-950 px-4 sm:px-6">\
+          <div className="max-w-7xl mx-auto flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar">\
+            <button \
+              onClick=\{() => setActiveTab('checkin')\} \
+              className=\{`flex items-center space-x-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors $\{\
+                activeTab === 'checkin' ? 'border-amber-400 text-amber-400' : 'border-transparent text-indigo-200 hover:text-white'\
+              \}`\}\
+            >\
+              <UserCheck className="w-4 h-4" />\
+              <span>Game Day Check-In</span>\
+            </button>\
+            <button \
+              onClick=\{() => setActiveTab('events')\} \
+              className=\{`flex items-center space-x-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors $\{\
+                activeTab === 'events' ? 'border-amber-400 text-amber-400' : 'border-transparent text-indigo-200 hover:text-white'\
+              \}`\}\
+            >\
+              <Calendar className="w-4 h-4" />\
+              <span>Schedules & Duties</span>\
+            </button>\
+            <button \
+              onClick=\{() => setActiveTab('students')\} \
+              className=\{`flex items-center space-x-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors $\{\
+                activeTab === 'students' ? 'border-amber-400 text-amber-400' : 'border-transparent text-indigo-200 hover:text-white'\
+              \}`\}\
+            >\
+              <Users className="w-4 h-4" />\
+              <span>Student Directory</span>\
+            </button>\
+            <button \
+              onClick=\{() => setActiveTab('reports')\} \
+              className=\{`flex items-center space-x-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors $\{\
+                activeTab === 'reports' ? 'border-amber-400 text-amber-400' : 'border-transparent text-indigo-200 hover:text-white'\
+              \}`\}\
+            >\
+              <FileText className="w-4 h-4" />\
+              <span>Hours & Reports</span>\
+            </button>\
+          </div>\
+        </div>\
+      </header>\
+\
+      \{/* Main Container */\}\
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">\
+\
+        \{/* TOP SUMMARY STATS */\}\
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">\
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-3">\
+            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">\
+              <Users className="w-6 h-6" />\
+            </div>\
+            <div>\
+              <p className="text-xs text-slate-500 font-medium uppercase">Registered Students</p>\
+              <p className="text-xl font-bold text-slate-800">\{students.length\}</p>\
+            </div>\
+          </div>\
+\
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-3">\
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">\
+              <LogIn className="w-6 h-6" />\
+            </div>\
+            <div>\
+              <p className="text-xs text-slate-500 font-medium uppercase">Active On Duty</p>\
+              <p className="text-xl font-bold text-slate-800">\{activeCount\}</p>\
+            </div>\
+          </div>\
+\
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-3">\
+            <div className="p-3 bg-amber-50 text-amber-600 rounded-lg">\
+              <Award className="w-6 h-6" />\
+            </div>\
+            <div>\
+              <p className="text-xs text-slate-500 font-medium uppercase">Logged Today</p>\
+              <p className="text-xl font-bold text-slate-800">\{totalHoursToday.toFixed(1)\} hrs</p>\
+            </div>\
+          </div>\
+\
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-3">\
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">\
+              <Calendar className="w-6 h-6" />\
+            </div>\
+            <div>\
+              <p className="text-xs text-slate-500 font-medium uppercase">Home Games</p>\
+              <p className="text-xl font-bold text-slate-800">\{events.length\}</p>\
+            </div>\
+          </div>\
+        </div>\
+\
+        \{/* TAB 1: GAME DAY CHECK-IN */\}\
+        \{activeTab === 'checkin' && (\
+          <div className="space-y-6">\
+            \
+            \{/* Event Selector Header */\}\
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">\
+              <div className="flex items-center space-x-3">\
+                <Calendar className="w-5 h-5 text-indigo-600" />\
+                <div>\
+                  <label className="text-xs font-semibold text-slate-500 block uppercase">Active Event / Home Game</label>\
+                  <select \
+                    value=\{selectedEventId\} \
+                    onChange=\{(e) => setSelectedEventId(e.target.value)\}\
+                    className="mt-0.5 font-bold text-slate-800 text-base bg-transparent border-none focus:ring-0 p-0 cursor-pointer"\
+                  >\
+                    \{events.map(ev => (\
+                      <option key=\{ev.id\} value=\{ev.id\}>\
+                        \{ev.sport\} (\{ev.date\} @ \{ev.time\}) - \{ev.location\}\
+                      </option>\
+                    ))\}\
+                  </select>\
+                </div>\
+              </div>\
+\
+              <div className="flex items-center space-x-2">\
+                <button\
+                  onClick=\{() => setShowBulkUpload(true)\}\
+                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs px-3 py-2 rounded-lg transition-colors border border-indigo-200 flex items-center space-x-1"\
+                >\
+                  <CalendarPlus className="w-4 h-4" />\
+                  <span>Upload Home Schedule</span>\
+                </button>\
+              </div>\
+            </div>\
+\
+            \{/* PRE-ASSIGNED / EXPECTED VOLUNTEERS BANNER */\}\
+            \{currentPreassignments.length > 0 && (\
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 shadow-sm">\
+                <div className="flex items-center justify-between mb-3">\
+                  <div className="flex items-center space-x-2">\
+                    <UserCheck className="w-5 h-5 text-amber-700" />\
+                    <h3 className="font-bold text-amber-900 text-sm">Expected / Pre-Assigned Volunteers for this Game</h3>\
+                  </div>\
+                  <span className="text-xs font-semibold text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full">\
+                    \{currentPreassignments.length\} Pre-Assigned\
+                  </span>\
+                </div>\
+\
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">\
+                  \{currentPreassignments.map(pa => \{\
+                    const student = students.find(s => s.id === pa.studentId);\
+                    const isAlreadyCheckedIn = logs.some(l => l.studentId === pa.studentId && l.status === 'ACTIVE');\
+\
+                    return (\
+                      <div key=\{pa.id\} className="bg-white p-3 rounded-lg border border-amber-200 flex items-center justify-between shadow-xs">\
+                        <div className="flex items-center space-x-2.5">\
+                          <img src=\{student?.photo\} alt="" className="w-9 h-9 rounded-full object-cover border border-amber-300" />\
+                          <div>\
+                            <p className="font-bold text-xs text-slate-800">\{student?.name\}</p>\
+                            <p className="text-[10px] text-slate-500">Duty: <strong>\{pa.duty\}</strong></p>\
+                          </div>\
+                        </div>\
+\
+                        \{isAlreadyCheckedIn ? (\
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded">\
+                            Checked In\
+                          </span>\
+                        ) : (\
+                          <button\
+                            onClick=\{() => \{\
+                              handleCheckIn(pa.studentId, pa.duty);\
+                              handleRemovePreassignment(pa.id);\
+                            \}\}\
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-2.5 py-1 rounded flex items-center space-x-1"\
+                          >\
+                            <LogIn className="w-3 h-3" />\
+                            <span>In</span>\
+                          </button>\
+                        )\}\
+                      </div>\
+                    );\
+                  \})\}\
+                </div>\
+              </div>\
+            )\}\
+\
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">\
+              \
+              \{/* Left 2 Cols: Active Checked-In Volunteers */\}\
+              <div className="lg:col-span-2 space-y-6">\
+                \
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">\
+                  <div className="bg-slate-50 border-b border-slate-200 px-5 py-3.5 flex items-center justify-between">\
+                    <div className="flex items-center space-x-2">\
+                      <Clock className="w-5 h-5 text-emerald-600" />\
+                      <h2 className="font-bold text-slate-800">Currently On-Duty Volunteers</h2>\
+                    </div>\
+                    <span className="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">\
+                      \{currentEventLogs.filter(l => l.status === 'ACTIVE').length\} Checked In\
+                    </span>\
+                  </div>\
+\
+                  <div className="p-4 divide-y divide-slate-100">\
+                    \{currentEventLogs.filter(l => l.status === 'ACTIVE').length === 0 ? (\
+                      <div className="text-center py-8 text-slate-400">\
+                        <UserPlus className="w-10 h-10 mx-auto mb-2 opacity-50" />\
+                        <p className="text-sm font-medium">No volunteers checked in yet for this game.</p>\
+                        <p className="text-xs text-slate-400 mt-1">Select a student from the right panel to check them in directly when they report to you.</p>\
+                      </div>\
+                    ) : (\
+                      currentEventLogs.filter(l => l.status === 'ACTIVE').map(log => \{\
+                        const student = students.find(s => s.id === log.studentId);\
+\
+                        return (\
+                          <div key=\{log.id\} className="py-3.5 flex items-center justify-between">\
+                            <div className="flex items-center space-x-3">\
+                              <img \
+                                src=\{student?.photo\} \
+                                alt=\{student?.name\} \
+                                className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-sm"\
+                              />\
+                              <div>\
+                                <h3 className="font-bold text-slate-800 text-sm">\{student?.name\}</h3>\
+                                <p className="text-xs text-slate-500">ID: #\{student?.id\} \'95 Grade \{student?.grade\}</p>\
+                                <div className="mt-1 flex items-center space-x-2">\
+                                  <span className="bg-indigo-50 text-indigo-700 font-medium px-2 py-0.5 rounded text-[10px]">\
+                                    \{log.duty\}\
+                                  </span>\
+                                  <span className="text-[11px] text-slate-400 flex items-center">\
+                                    <Clock className="w-3 h-3 mr-1 inline" />\
+                                    In at \{new Date(log.checkInTime).toLocaleTimeString([], \{ hour: '2-digit', minute: '2-digit' \})\}\
+                                  </span>\
+                                </div>\
+                              </div>\
+                            </div>\
+\
+                            <button\
+                              onClick=\{() => openCheckOutModal(log)\}\
+                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs px-3.5 py-2 rounded-lg transition-colors border border-rose-200 flex items-center space-x-1.5"\
+                            >\
+                              <LogOut className="w-3.5 h-3.5" />\
+                              <span>Check Out / Grant Hours</span>\
+                            </button>\
+                          </div>\
+                        );\
+                      \})\
+                    )\}\
+                  </div>\
+                </div>\
+\
+                \{/* Duty Roles Overview */\}\
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">\
+                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Required Duties for \{activeEvent?.sport\}</h3>\
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">\
+                    \{activeEvent?.duties?.map((duty, idx) => \{\
+                      const activeCount = currentEventLogs.filter(l => l.duty === duty && l.status === 'ACTIVE').length;\
+                      const preCount = currentPreassignments.filter(p => p.duty === duty).length;\
+\
+                      return (\
+                        <div key=\{idx\} className="border border-slate-200 bg-slate-50 rounded-lg p-3">\
+                          <p className="font-semibold text-slate-800 text-sm">\{duty\}</p>\
+                          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">\
+                            <span>Active / Pre-assigned:</span>\
+                            <span className="font-bold text-indigo-700">\{activeCount\} / \{preCount\}</span>\
+                          </div>\
+                        </div>\
+                      );\
+                    \})\}\
+                  </div>\
+                </div>\
+\
+              </div>\
+\
+              \{/* Right Col: Walk-In Check-In / Assignment */\}\
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col h-full">\
+                <div className="flex items-center justify-between mb-4">\
+                  <div>\
+                    <h2 className="font-bold text-slate-800 text-base">In-Person Check In</h2>\
+                    <p className="text-[11px] text-slate-500">Select student to check in or pre-assign</p>\
+                  </div>\
+                  <button \
+                    onClick=\{() => setShowAddStudent(true)\}\
+                    className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold flex items-center space-x-1"\
+                  >\
+                    <Plus className="w-3.5 h-3.5" />\
+                    <span>New</span>\
+                  </button>\
+                </div>\
+\
+                \{/* Search Bar */\}\
+                <div className="relative mb-4">\
+                  <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />\
+                  <input\
+                    type="text"\
+                    placeholder="Search name or ID..."\
+                    value=\{searchQuery\}\
+                    onChange=\{(e) => setSearchQuery(e.target.value)\}\
+                    className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"\
+                  />\
+                </div>\
+\
+                \{/* Student Roster */\}\
+                <div className="flex-1 overflow-y-auto max-h-[440px] space-y-2 pr-1">\
+                  \{students\
+                    .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.id.includes(searchQuery))\
+                    .map(student => \{\
+                      const isActive = logs.some(l => l.studentId === student.id && l.status === 'ACTIVE');\
+                      const isPreassigned = preassignments.some(p => p.eventId === selectedEventId && p.studentId === student.id);\
+\
+                      return (\
+                        <div \
+                          key=\{student.id\} \
+                          className=\{`p-3 rounded-lg border flex items-center justify-between transition-all $\{\
+                            isActive \
+                              ? 'bg-slate-50 border-slate-200 opacity-60' \
+                              : 'bg-white border-slate-200 hover:border-indigo-300 shadow-2xs'\
+                          \}`\}\
+                        >\
+                          <div className="flex items-center space-x-2.5">\
+                            <img src=\{student.photo\} alt=\{student.name\} className="w-10 h-10 rounded-full object-cover" />\
+                            <div>\
+                              <p className="font-semibold text-xs text-slate-800">\{student.name\}</p>\
+                              <p className="text-[10px] text-slate-500">ID: #\{student.id\} \'95 Gr \{student.grade\}</p>\
+                            </div>\
+                          </div>\
+\
+                          \{isActive ? (\
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-1 rounded">\
+                              On Duty\
+                            </span>\
+                          ) : (\
+                            <button\
+                              onClick=\{() => \{\
+                                setSelectedStudentForDuty(student);\
+                                setSelectedDuty(activeEvent?.duties?.[0] || 'Concessions');\
+                                setShowAssignDutyModal(true);\
+                              \}\}\
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-2.5 py-1.5 rounded flex items-center space-x-1"\
+                            >\
+                              <span>Select</span>\
+                              <ChevronRight className="w-3 h-3" />\
+                            </button>\
+                          )\}\
+                        </div>\
+                      );\
+                    \})\}\
+                </div>\
+              </div>\
+\
+            </div>\
+          </div>\
+        )\}\
+\
+        \{/* TAB 2: SCHEDULES & GAME MANAGEMENT */\}\
+        \{activeTab === 'events' && (\
+          <div className="space-y-6">\
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">\
+              <div>\
+                <h2 className="text-lg font-bold text-slate-800">Home Game Schedule & Volunteer Roster</h2>\
+                <p className="text-xs text-slate-500">Upload home schedules or assign student volunteer duties in advance.</p>\
+              </div>\
+\
+              <div className="flex items-center space-x-2">\
+                <button\
+                  onClick=\{() => setShowBulkUpload(true)\}\
+                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs px-3 py-2 rounded-lg transition-colors border border-indigo-200 flex items-center space-x-1"\
+                >\
+                  <CalendarPlus className="w-4 h-4" />\
+                  <span>Bulk Upload Schedule</span>\
+                </button>\
+                <button\
+                  onClick=\{() => setShowAddEvent(true)\}\
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-3 py-2 rounded-lg flex items-center space-x-1 shadow-sm"\
+                >\
+                  <Plus className="w-4 h-4" />\
+                  <span>Add Single Game</span>\
+                </button>\
+              </div>\
+            </div>\
+\
+            \{/* Events Grid */\}\
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">\
+              \{events.map(ev => \{\
+                const assignedCount = preassignments.filter(p => p.eventId === ev.id).length;\
+\
+                return (\
+                  <div key=\{ev.id\} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between">\
+                    <div>\
+                      <div className="flex justify-between items-start mb-2">\
+                        <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded">\
+                          \{ev.sport\}\
+                        </span>\
+                        <span className="text-xs text-slate-500 font-medium">\{ev.date\}</span>\
+                      </div>\
+\
+                      <h3 className="font-bold text-slate-800 text-lg">\{ev.sport\} Game</h3>\
+                      <p className="text-xs text-slate-500 mt-1 flex items-center">\
+                        <Clock className="w-3.5 h-3.5 mr-1 text-slate-400" /> Time: \{ev.time\}\
+                      </p>\
+                      <p className="text-xs text-slate-500 mt-0.5 flex items-center">\
+                        <Building className="w-3.5 h-3.5 mr-1 text-slate-400" /> Location: \{ev.location\}\
+                      </p>\
+\
+                      <div className="mt-4 pt-3 border-t border-slate-100">\
+                        <p className="text-xs font-semibold text-slate-700 mb-2">Duty Roles Needed:</p>\
+                        <div className="flex flex-wrap gap-1.5">\
+                          \{ev.duties.map((duty, idx) => (\
+                            <span key=\{idx\} className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded border border-slate-200">\
+                              \{duty\}\
+                            </span>\
+                          ))\}\
+                        </div>\
+                      </div>\
+                    </div>\
+\
+                    <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">\
+                      <span className="text-xs text-slate-500 font-medium">Pre-Assigned: <strong>\{assignedCount\}</strong></span>\
+                      <button\
+                        onClick=\{() => \{\
+                          setSelectedEventId(ev.id);\
+                          setActiveTab('checkin');\
+                        \}\}\
+                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors border border-indigo-200"\
+                      >\
+                        Manage Duties\
+                      </button>\
+                    </div>\
+                  </div>\
+                );\
+              \})\}\
+            </div>\
+          </div>\
+        )\}\
+\
+        \{/* TAB 3: STUDENT DIRECTORY */\}\
+        \{activeTab === 'students' && (\
+          <div className="space-y-6">\
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">\
+              <div className="relative flex-1 max-w-md">\
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />\
+                <input\
+                  type="text"\
+                  placeholder="Search students by name or ID..."\
+                  value=\{searchQuery\}\
+                  onChange=\{(e) => setSearchQuery(e.target.value)\}\
+                  className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"\
+                />\
+              </div>\
+\
+              <button\
+                onClick=\{() => setShowAddStudent(true)\}\
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-4 py-2 rounded-lg flex items-center space-x-2 shadow-sm transition-colors"\
+              >\
+                <UserPlus className="w-4 h-4" />\
+                <span>Register New Student</span>\
+              </button>\
+            </div>\
+\
+            \{/* Students Cards Grid */\}\
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">\
+              \{students\
+                .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.id.includes(searchQuery))\
+                .map(student => (\
+                  <div key=\{student.id\} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col items-center text-center relative overflow-hidden">\
+                    <div className="w-20 h-20 rounded-full border-4 border-indigo-50 shadow-inner overflow-hidden mb-3">\
+                      <img src=\{student.photo\} alt=\{student.name\} className="w-full h-full object-cover" />\
+                    </div>\
+                    <h3 className="font-bold text-slate-800 text-base">\{student.name\}</h3>\
+                    <p className="text-xs text-slate-500">Student ID: #\{student.id\}</p>\
+                    <span className="mt-1 inline-block bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">\
+                      Grade \{student.grade\}\
+                    </span>\
+\
+                    <div className="w-full mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">\
+                      <span className="text-xs text-slate-500">Accumulated Hours:</span>\
+                      <span className="font-extrabold text-indigo-600 text-sm">\{student.totalHours.toFixed(1)\} hrs</span>\
+                    </div>\
+                  </div>\
+                ))\}\
+            </div>\
+          </div>\
+        )\}\
+\
+        \{/* TAB 4: REPORTS & BONUS LOGS */\}\
+        \{activeTab === 'reports' && (\
+          <div className="space-y-6">\
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">\
+              <div>\
+                <h2 className="font-bold text-slate-800 text-base">Volunteer Hours Log & Adjustments</h2>\
+                <p className="text-xs text-slate-500">Full history of check-in times, worked hours, and admin bonus hour awards.</p>\
+              </div>\
+\
+              <button\
+                onClick=\{exportToCSV\}\
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2 rounded-lg flex items-center space-x-2 shadow-sm"\
+              >\
+                <Download className="w-4 h-4" />\
+                <span>Export Hours to CSV</span>\
+              </button>\
+            </div>\
+\
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">\
+              <div className="overflow-x-auto">\
+                <table className="w-full text-left text-xs text-slate-600">\
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 uppercase tracking-wider font-semibold">\
+                    <tr>\
+                      <th className="p-3.5">Student</th>\
+                      <th className="p-3.5">Event / Sport</th>\
+                      <th className="p-3.5">Duty Role</th>\
+                      <th className="p-3.5">Check In</th>\
+                      <th className="p-3.5">Check Out</th>\
+                      <th className="p-3.5">Worked</th>\
+                      <th className="p-3.5">Bonus Rewarded</th>\
+                      <th className="p-3.5 font-bold">Total Earned</th>\
+                    </tr>\
+                  </thead>\
+                  <tbody className="divide-y divide-slate-100">\
+                    \{logs.map(log => \{\
+                      const student = students.find(s => s.id === log.studentId);\
+                      const event = events.find(e => e.id === log.eventId);\
+                      const base = log.hoursEarned || 0;\
+                      const bonus = log.bonusHours || 0;\
+\
+                      return (\
+                        <tr key=\{log.id\} className="hover:bg-slate-50">\
+                          <td className="p-3.5 font-medium text-slate-800 flex items-center space-x-2">\
+                            <img src=\{student?.photo\} alt="" className="w-7 h-7 rounded-full object-cover" />\
+                            <span>\{student?.name\} (#\{log.studentId\})</span>\
+                          </td>\
+                          <td className="p-3.5 font-medium">\{event?.sport\}</td>\
+                          <td className="p-3.5">\{log.duty\}</td>\
+                          <td className="p-3.5">\{new Date(log.checkInTime).toLocaleString()\}</td>\
+                          <td className="p-3.5">\{log.checkOutTime ? new Date(log.checkOutTime).toLocaleString() : 'In Progress'\}</td>\
+                          <td className="p-3.5 font-medium text-slate-700">\{base ? `$\{base.toFixed(1)\} hrs` : '-'\}</td>\
+                          <td className="p-3.5">\
+                            \{bonus > 0 ? (\
+                              <span className="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px] inline-flex items-center space-x-1" title=\{log.bonusReason\}>\
+                                <Gift className="w-3 h-3 mr-1" />\
+                                +\{bonus\} hr (\{log.bonusReason || 'Extra work'\})\
+                              </span>\
+                            ) : '-'\}\
+                          </td>\
+                          <td className="p-3.5 font-bold text-indigo-700">\{(base + bonus).toFixed(1)\} hrs</td>\
+                        </tr>\
+                      );\
+                    \})\}\
+                  </tbody>\
+                </table>\
+              </div>\
+            </div>\
+          </div>\
+        )\}\
+\
+      </main>\
+\
+      \{/* MODAL: CHECK-OUT WITH BONUS HOURS */\}\
+      \{showCheckOutModal && selectedLogForCheckOut && (\
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">\
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6">\
+            <h3 className="text-lg font-bold text-slate-800 mb-1">Check Out Volunteer</h3>\
+            <p className="text-xs text-slate-500 mb-4">Complete shift and award hours to student.</p>\
+\
+            \{(() => \{\
+              const student = students.find(s => s.id === selectedLogForCheckOut.studentId);\
+              const durationMins = Math.floor((new Date() - new Date(selectedLogForCheckOut.checkInTime)) / (1000 * 60));\
+              const hoursWorked = (durationMins / 60).toFixed(1);\
+\
+              return (\
+                <div className="space-y-4">\
+                  <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg border border-slate-200">\
+                    <img src=\{student?.photo\} alt="" className="w-12 h-12 rounded-full object-cover" />\
+                    <div>\
+                      <p className="font-bold text-sm text-slate-800">\{student?.name\}</p>\
+                      <p className="text-xs text-slate-500">Duty: <strong>\{selectedLogForCheckOut.duty\}</strong></p>\
+                      <p className="text-xs text-emerald-600 font-semibold mt-0.5">Time Served: ~\{hoursWorked\} hours (\{durationMins\} mins)</p>\
+                    </div>\
+                  </div>\
+\
+                  <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 space-y-3">\
+                    <div className="flex items-center space-x-1.5 text-amber-900 font-bold text-xs">\
+                      <Gift className="w-4 h-4 text-amber-600" />\
+                      <span>Reward Bonus / Extra Hours</span>\
+                    </div>\
+\
+                    <div>\
+                      <label className="text-xs font-semibold text-amber-900 block mb-1">Additional Bonus Hours:</label>\
+                      <input\
+                        type="number"\
+                        step="0.5"\
+                        min="0"\
+                        value=\{checkoutBonusHours\}\
+                        onChange=\{(e) => setCheckoutBonusHours(e.target.value)\}\
+                        className="w-full p-2 border border-amber-300 rounded text-sm bg-white focus:ring-2 focus:ring-amber-500"\
+                        placeholder="0.0"\
+                      />\
+                    </div>\
+\
+                    <div>\
+                      <label className="text-xs font-semibold text-amber-900 block mb-1">Reason for Extra Hours (Optional):</label>\
+                      <input\
+                        type="text"\
+                        placeholder="e.g. Stayed late to clean field / Extra setup work"\
+                        value=\{checkoutBonusReason\}\
+                        onChange=\{(e) => setCheckoutBonusReason(e.target.value)\}\
+                        className="w-full p-2 border border-amber-300 rounded text-sm bg-white focus:ring-2 focus:ring-amber-500"\
+                      />\
+                    </div>\
+                  </div>\
+\
+                  <div className="mt-6 flex justify-end space-x-3">\
+                    <button\
+                      onClick=\{() => setShowCheckOutModal(false)\}\
+                      className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"\
+                    >\
+                      Cancel\
+                    </button>\
+                    <button\
+                      onClick=\{confirmCheckOut\}\
+                      className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center space-x-1"\
+                    >\
+                      <Check className="w-4 h-4" />\
+                      <span>Confirm Check-Out & Award</span>\
+                    </button>\
+                  </div>\
+                </div>\
+              );\
+            \})()\}\
+          </div>\
+        </div>\
+      )\}\
+\
+      \{/* MODAL: ASSIGN / PRE-ASSIGN DUTY */\}\
+      \{showAssignDutyModal && selectedStudentForDuty && (\
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">\
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6">\
+            <h3 className="text-lg font-bold text-slate-800 mb-1">Assign Student Duty</h3>\
+            <p className="text-xs text-slate-500 mb-4">Choose duty and decide to check-in now or pre-assign for game day.</p>\
+\
+            <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg border border-slate-200 mb-4">\
+              <img src=\{selectedStudentForDuty.photo\} alt="" className="w-12 h-12 rounded-full object-cover" />\
+              <div>\
+                <p className="font-bold text-sm text-slate-800">\{selectedStudentForDuty.name\}</p>\
+                <p className="text-xs text-slate-500">ID #\{selectedStudentForDuty.id\} \'95 Grade \{selectedStudentForDuty.grade\}</p>\
+              </div>\
+            </div>\
+\
+            <div className="space-y-3">\
+              <label className="text-xs font-bold text-slate-700 uppercase">Select Duty Role:</label>\
+              <select\
+                value=\{selectedDuty\}\
+                onChange=\{(e) => setSelectedDuty(e.target.value)\}\
+                className="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"\
+              >\
+                \{activeEvent?.duties?.map((d, i) => (\
+                  <option key=\{i\} value=\{d\}>\{d\}</option>\
+                ))\}\
+              </select>\
+            </div>\
+\
+            <div className="mt-6 grid grid-cols-2 gap-3">\
+              <button\
+                onClick=\{() => handlePreAssignStudent(selectedStudentForDuty.id, selectedDuty)\}\
+                className="w-full px-3 py-2.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300"\
+              >\
+                Pre-Assign for Later\
+              </button>\
+              <button\
+                onClick=\{() => handleCheckIn(selectedStudentForDuty.id, selectedDuty)\}\
+                className="w-full px-3 py-2.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center space-x-1"\
+              >\
+                <LogIn className="w-3.5 h-3.5" />\
+                <span>Check In Now</span>\
+              </button>\
+            </div>\
+          </div>\
+        </div>\
+      )\}\
+\
+      \{/* MODAL: BULK UPLOAD SEASON SCHEDULE */\}\
+      \{showBulkUpload && (\
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">\
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full p-6">\
+            <h3 className="text-lg font-bold text-slate-800 mb-1">Bulk Upload Sport's Home Schedule</h3>\
+            <p className="text-xs text-slate-500 mb-4">Automatically generate all home game dates and volunteer slots for a sport season.</p>\
+\
+            <form onSubmit=\{handleGenerateBulkSchedule\} className="space-y-4">\
+              <div>\
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Sport Type</label>\
+                <select\
+                  value=\{bulkSport\}\
+                  onChange=\{(e) => setBulkSport(e.target.value)\}\
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"\
+                >\
+                  <option value="Varsity Football">Varsity Football</option>\
+                  <option value="JV Football">JV Football</option>\
+                  <option value="Girls Basketball">Girls Basketball</option>\
+                  <option value="Boys Basketball">Boys Basketball</option>\
+                  <option value="Track & Field Meet">Track & Field Meet</option>\
+                  <option value="Soccer Match">Soccer Match</option>\
+                  <option value="Volleyball Game">Volleyball Game</option>\
+                </select>\
+              </div>\
+\
+              <div className="grid grid-cols-2 gap-3">\
+                <div>\
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Number of Home Games</label>\
+                  <input\
+                    type="number"\
+                    min="1"\
+                    max="20"\
+                    value=\{bulkGameCount\}\
+                    onChange=\{(e) => setBulkGameCount(e.target.value)\}\
+                    className="w-full p-2 border border-slate-300 rounded-lg text-sm"\
+                  />\
+                </div>\
+\
+                <div>\
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Recurring Day</label>\
+                  <select\
+                    value=\{bulkDayOfWeek\}\
+                    onChange=\{(e) => setBulkDayOfWeek(e.target.value)\}\
+                    className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"\
+                  >\
+                    <option value="1">Monday</option>\
+                    <option value="2">Tuesday</option>\
+                    <option value="3">Wednesday</option>\
+                    <option value="4">Thursday</option>\
+                    <option value="5">Friday</option>\
+                    <option value="6">Saturday</option>\
+                  </select>\
+                </div>\
+              </div>\
+\
+              <div className="grid grid-cols-2 gap-3">\
+                <div>\
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Season Start Date</label>\
+                  <input\
+                    type="date"\
+                    value=\{bulkStartDate\}\
+                    onChange=\{(e) => setBulkStartDate(e.target.value)\}\
+                    className="w-full p-2 border border-slate-300 rounded-lg text-sm"\
+                  />\
+                </div>\
+\
+                <div>\
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Game Time</label>\
+                  <input\
+                    type="time"\
+                    value=\{bulkTime\}\
+                    onChange=\{(e) => setBulkTime(e.target.value)\}\
+                    className="w-full p-2 border border-slate-300 rounded-lg text-sm"\
+                  />\
+                </div>\
+              </div>\
+\
+              <div>\
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Venue / Stadium Name</label>\
+                <input\
+                  type="text"\
+                  value=\{bulkLocation\}\
+                  onChange=\{(e) => setBulkLocation(e.target.value)\}\
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm"\
+                />\
+              </div>\
+\
+              <div>\
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Standard Duties Needed (Comma separated)</label>\
+                <input\
+                  type="text"\
+                  value=\{bulkDuties\}\
+                  onChange=\{(e) => setBulkDuties(e.target.value)\}\
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm"\
+                />\
+              </div>\
+\
+              <div className="mt-6 flex justify-end space-x-3 pt-3 border-t">\
+                <button\
+                  type="button"\
+                  onClick=\{() => setShowBulkUpload(false)\}\
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"\
+                >\
+                  Cancel\
+                </button>\
+                <button\
+                  type="submit"\
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white"\
+                >\
+                  Generate Home Games Schedule\
+                </button>\
+              </div>\
+            </form>\
+          </div>\
+        </div>\
+      )\}\
+\
+      \{/* MODAL: REGISTER NEW STUDENT */\}\
+      \{showAddStudent && (\
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">\
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6">\
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Register New Student Volunteer</h3>\
+            <form onSubmit=\{handleAddStudentSubmit\} className="space-y-4">\
+              <div>\
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Full Name</label>\
+                <input\
+                  type="text"\
+                  required\
+                  placeholder="e.g. Jane Doe"\
+                  value=\{newStudent.name\}\
+                  onChange=\{(e) => setNewStudent(\{ ...newStudent, name: e.target.value \})\}\
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"\
+                />\
+              </div>\
+\
+              <div className="grid grid-cols-2 gap-3">\
+                <div>\
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Student ID #</label>\
+                  <input\
+                    type="text"\
+                    required\
+                    placeholder="1007"\
+                    value=\{newStudent.id\}\
+                    onChange=\{(e) => setNewStudent(\{ ...newStudent, id: e.target.value \})\}\
+                    className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"\
+                  />\
+                </div>\
+\
+                <div>\
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Grade</label>\
+                  <select\
+                    value=\{newStudent.grade\}\
+                    onChange=\{(e) => setNewStudent(\{ ...newStudent, grade: e.target.value \})\}\
+                    className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500"\
+                  >\
+                    <option value="09">9th Grade</option>\
+                    <option value="10">10th Grade</option>\
+                    <option value="11">11th Grade</option>\
+                    <option value="12">12th Grade</option>\
+                  </select>\
+                </div>\
+              </div>\
+\
+              <div>\
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Photo URL (Optional)</label>\
+                <input\
+                  type="url"\
+                  placeholder="https://..."\
+                  value=\{newStudent.photo\}\
+                  onChange=\{(e) => setNewStudent(\{ ...newStudent, photo: e.target.value \})\}\
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"\
+                />\
+              </div>\
+\
+              <div className="mt-6 flex justify-end space-x-3 pt-3 border-t">\
+                <button\
+                  type="button"\
+                  onClick=\{() => setShowAddStudent(false)\}\
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"\
+                >\
+                  Cancel\
+                </button>\
+                <button\
+                  type="submit"\
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white"\
+                >\
+                  Save Student\
+                </button>\
+              </div>\
+            </form>\
+          </div>\
+        </div>\
+      )\}\
+\
+      \{/* MODAL: ADD SINGLE SPORT EVENT */\}\
+      \{showAddEvent && (\
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">\
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6">\
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Create Single Event</h3>\
+            <form onSubmit=\{handleAddEventSubmit\} className="space-y-4">\
+              <div>\
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Sport Title</label>\
+                <select\
+                  value=\{newEvent.sport\}\
+                  onChange=\{(e) => setNewEvent(\{ ...newEvent, sport: e.target.value \})\}\
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"\
+                >\
+                  <option value="Varsity Football">Varsity Football</option>\
+                  <option value="JV Football">JV Football</option>\
+                  <option value="Girls Basketball">Girls Basketball</option>\
+                  <option value="Boys Basketball">Boys Basketball</option>\
+                  <option value="Track & Field Meet">Track & Field Meet</option>\
+                  <option value="Soccer Match">Soccer Match</option>\
+                  <option value="Volleyball Game">Volleyball Game</option>\
+                </select>\
+              </div>\
+\
+              <div className="grid grid-cols-2 gap-3">\
+                <div>\
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Date</label>\
+                  <input\
+                    type="date"\
+                    required\
+                    value=\{newEvent.date\}\
+                    onChange=\{(e) => setNewEvent(\{ ...newEvent, date: e.target.value \})\}\
+                    className="w-full p-2 border border-slate-300 rounded-lg text-sm"\
+                  />\
+                </div>\
+\
+                <div>\
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Time</label>\
+                  <input\
+                    type="time"\
+                    required\
+                    value=\{newEvent.time\}\
+                    onChange=\{(e) => setNewEvent(\{ ...newEvent, time: e.target.value \})\}\
+                    className="w-full p-2 border border-slate-300 rounded-lg text-sm"\
+                  />\
+                </div>\
+              </div>\
+\
+              <div>\
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Location / Field</label>\
+                <input\
+                  type="text"\
+                  placeholder="Main Field / Gymnasium A"\
+                  value=\{newEvent.location\}\
+                  onChange=\{(e) => setNewEvent(\{ ...newEvent, location: e.target.value \})\}\
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm"\
+                />\
+              </div>\
+\
+              <div>\
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Duties (Comma separated)</label>\
+                <input\
+                  type="text"\
+                  placeholder="Concessions, Ticket Gate, Scorekeeper"\
+                  value=\{newEvent.duties\}\
+                  onChange=\{(e) => setNewEvent(\{ ...newEvent, duties: e.target.value \})\}\
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm"\
+                />\
+              </div>\
+\
+              <div className="mt-6 flex justify-end space-x-3 pt-3 border-t">\
+                <button\
+                  type="button"\
+                  onClick=\{() => setShowAddEvent(false)\}\
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"\
+                >\
+                  Cancel\
+                </button>\
+                <button\
+                  type="submit"\
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white"\
+                >\
+                  Create Event\
+                </button>\
+              </div>\
+            </form>\
+          </div>\
+        </div>\
+      )\}\
+\
+    </div>\
+  );\
+\}}
